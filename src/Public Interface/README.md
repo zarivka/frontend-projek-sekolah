@@ -1,0 +1,1 @@
+folder ini untuk semua yang berhubungan dengan tampilan frontend yang dapat diakses secara publik

@@ -1,0 +1,1 @@
+folder ini digunakan untuk menyimpan semua halaman yang akan ditampilkan di frontend, dan hanya dapat diakses oleh admin
