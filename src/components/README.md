@@ -2,6 +2,4 @@ folder ini untuk komponen frontend yang akan digunakan untuk membuat tampilan ko
 
 kiuyjiytujhy6tyh
 
-tes
-
 tes seko branch manazhir

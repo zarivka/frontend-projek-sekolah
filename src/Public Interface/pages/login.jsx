@@ -1,4 +1,5 @@
 import { FiKey, FiMail } from 'react-icons/fi'
+import { Link } from 'react-router-dom'
 
 function Login() {
 	return (
@@ -40,7 +41,7 @@ function Login() {
 							type="button"
 							className="w-full rounded-2xl bg-[#1380f1] px-5 py-3 text-3xl font-semibold text-white shadow-[0_10px_22px_rgba(19,128,241,0.28)] transition hover:bg-[#0f71d8]"
 						>
-							Masuk
+							<Link to="/">Masuk</Link>
 						</button>
 
 						<p className="pt-1 text-center text-base text-slate-700">
