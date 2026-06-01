@@ -1,22 +1,74 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Card, Col, List, Row, Space, Statistic, Tag, Typography } from "antd";
-import { ArrowRightOutlined, CalendarOutlined, ReadOutlined, TeamOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined, CalendarOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout.jsx";
-
-const quickStats = [
-    { title: "Berita", value: 11, suffix: "item", color: "#0f58a8" },
-    { title: "Guru terdata", value: 11, suffix: "orang", color: "#0f766e" },
-    { title: "Pengunjung Web", value: 111, suffix: "orang", color: "#7c3aed" },
-];
-
-const recentUpdates = [
-    { time: "08.00", title: "Menambahkan data guru baru", detail: "Menambahkan Pak Bambang sebagai guru rpl baru" },
-    { time: "10.15", title: "Mengedit berita 'Sapi Lepas' ", detail: "Memperbaiki typo." },
-    { time: "13.00", title: "Menambahkan berita baru", detail: "Membuat berita tentang kegiatan sekolah" },
-];
+import api from "../../api/index.js";
 
 function Dashboard() {
+    const [quickStats, setQuickStats] = useState([]);
+    const [recentUpdates, setRecentUpdates] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+
+        // Load all necessary data for the dashboard overview, including news, announcements, and user summary
+        const loadDashboard = async () => {
+            try {
+                const [newsRes, announcementRes, userRes] = await Promise.all([
+                    api.get("/berita"),
+                    api.get("/pengumuman"),
+                    api.get("/user"),
+                ]);
+
+                if (!mounted) return;
+
+                const users = userRes.data;
+                const guruCount = users.filter((user) => user.role === "Guru").length;
+                const staffCount = users.filter((user) => user.role === "Staff").length;
+                const totalUserCount = users.length;
+
+                setQuickStats([
+                    { title: "Berita", value: newsRes.data.length, suffix: "item", color: "#0f58a8" },
+                    { title: "Guru terdata", value: guruCount, suffix: "orang", color: "#0f766e" },
+                    { title: "Pengumuman", value: announcementRes.data.length, suffix: "item", color: "#7c3aed" },
+                ]);
+
+                const latestNews = newsRes.data.slice(0, 3).map((item) => ({
+                    time: new Date(item.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+                    title: item.title,
+                    detail: item.summary,
+                }));
+
+                const latestAnnouncements = announcementRes.data.slice(0, 2).map((item) => ({
+                    time: new Date(item.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+                    title: item.title,
+                    detail: item.content,
+                }));
+
+                setRecentUpdates([
+                    ...latestNews,
+                    ...latestAnnouncements,
+                    {
+                        time: "-",
+                        title: "Ringkasan user terdata",
+                        detail: `Total user ${totalUserCount}, guru ${guruCount}, staff ${staffCount}`,
+                    },
+                ]);
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        loadDashboard();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
     return (
         <AdminLayout
             title="Selamat datang di dashboard admin"
@@ -41,7 +93,7 @@ function Dashboard() {
                                 Halaman dashboard admin
                             </Typography.Title>
                             <Typography.Paragraph style={{ margin: 0, color: "rgba(255,255,255,0.88)", fontSize: 16, maxWidth: 700 }}>
-                                Gunakan dashboard ini sebagai pintu masuk untuk memantau ringkasan data, membuka halaman berita, dan mengelola daftar guru secara lokal.
+                                Gunakan dashboard ini sebagai pintu masuk untuk memantau ringkasan data, membuka halaman berita, dan mengelola daftar guru.
                             </Typography.Paragraph>
                         </Col>
                         <Col xs={24} lg={9}>
@@ -63,6 +115,12 @@ function Dashboard() {
                         </Col>
                     </Row>
                 </Card>
+
+                {loading ? (
+                    <Card bordered={false} style={{ borderRadius: 24, boxShadow: "0 14px 32px rgba(15, 23, 42, 0.06)" }}>
+                        Memuat data dashboard...
+                    </Card>
+                ) : null}
 
                 <Row gutter={[20, 20]}>
                     {quickStats.map((item) => (
