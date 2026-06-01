@@ -6,13 +6,14 @@ import {
     TeamOutlined,
     LogoutOutlined,
 } from '@ant-design/icons';
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const { Sider } = Layout;
 
 const Sidebar = ({ collapsed, onCollapse }) => {
     const location = useLocation();
-    const navigate = useNavigate();
+    const { logout } = useAuth();
 
     const selectedKey = useMemo(() => {
         const path = location.pathname;
@@ -23,8 +24,7 @@ const Sidebar = ({ collapsed, onCollapse }) => {
     }, [location.pathname]);
 
     const handleLogout = () => {
-        window.alert("Logout successful!");
-        navigate("/login");
+        logout();
     };
 
     return (

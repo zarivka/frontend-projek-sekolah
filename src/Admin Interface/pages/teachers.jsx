@@ -1,67 +1,44 @@
-import React, { useMemo, useState } from "react";
-import { Avatar, Button, Card, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Typography } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined, TeamOutlined } from "@ant-design/icons";
+import React, { useEffect, useMemo, useState } from "react";
+import { Avatar, Button, Card, Col, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography } from "antd";
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import AdminLayout from "../components/AdminLayout.jsx";
-
-const initialTeachers = [
-    {
-        id: 1,
-        name: "Albasori, S.Pd",
-        role: "Kepala Sekolah",
-        subject: "Manajemen Sekolah",
-        status: "Active",
-        phone: "+62 812 3456 7890",
-    },
-    {
-        id: 2,
-        name: "Ina Yustita, S.Pd",
-        role: "Guru",
-        subject: "Matematika",
-        status: "Active",
-        phone: "+62 813 4444 2233",
-    },
-    {
-        id: 3,
-        name: "Bambang Hadi Waksono, S.Kom",
-        role: "Guru",
-        subject: "Informatika",
-        status: "Inactive",
-        phone: "+62 811 2020 2020",
-    },
-    {
-        id: 4,
-        name: "Kobo Kanaeru, S.Pd",
-        role: "Karyawan",
-        subject: "Administrasi",
-        status: "Active",
-        phone: "+62 817 5555 1122",
-    },
-];
-
-const roleOptions = ["Kepala Sekolah", "Guru", "Karyawan", "Wakil Kepala Sekolah"];
-const statusOptions = ["Active", "Inactive"];
-
-const statusColors = {
-    Active: "green",
-    Inactive: "default",
-};
+import api from "../../api/index.js";
 
 function Teachers() {
-    const [teachers, setTeachers] = useState(initialTeachers);
+    const [teachers, setTeachers] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [form] = Form.useForm();
 
+    const roleOptions = ["Guru", "Staff", "Admin", "Murid"];
+
+    const loadTeachers = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get("/user");
+            setTeachers(res.data.filter((item) => item.role === "Guru" || item.role === "Staff"));
+        } catch (err) {
+            console.error("Failed to load teachers:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadTeachers();
+    }, []);
+
     const summaryCards = useMemo(() => ([
-        { label: "Total guru & staf", value: teachers.length, description: "Daftar guru yang ada di web sekolah" },
-        { label: "Status aktif", value: teachers.filter((item) => item.status === "Active").length, description: "Data yang guru yang ditampilkan" },
-        { label: "Status nonaktif", value: teachers.filter((item) => item.status === "Inactive").length, description: "Data guru yang tidak ditampilkan" },
+        { label: "Total guru & staf", value: teachers.length, description: "Data dari backend" },
+        { label: "Guru", value: teachers.filter((item) => item.role === "Guru").length, description: "Akun berperan guru" },
+        { label: "Staff", value: teachers.filter((item) => item.role === "Staff").length, description: "Akun berperan staff" },
     ]), [teachers]);
 
     const openCreateModal = () => {
         setEditingTeacher(null);
         form.resetFields();
-        form.setFieldsValue({ role: roleOptions[1], status: statusOptions[0] });
+        form.setFieldsValue({ role: roleOptions[0] });
         setIsModalOpen(true);
     };
 
@@ -71,26 +48,21 @@ function Teachers() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
-        setTeachers((current) => current.filter((item) => item.id !== id));
-    };
+    const handleSubmit = async (values) => {
+        try {
+            if (editingTeacher) {
+                await api.put(`/user/${editingTeacher._id}`, values);
+            } else {
+                await api.post("/user", values);
+            }
 
-    const handleSubmit = (values) => {
-        if (editingTeacher) {
-            setTeachers((current) => current.map((item) => (item.id === editingTeacher.id ? { ...item, ...values } : item)));
-        } else {
-            setTeachers((current) => [
-                {
-                    id: Date.now(),
-                    ...values,
-                },
-                ...current,
-            ]);
+            await loadTeachers();
+            setIsModalOpen(false);
+            setEditingTeacher(null);
+            form.resetFields();
+        } catch (err) {
+            console.error("Failed to save teacher:", err);
         }
-
-        setIsModalOpen(false);
-        setEditingTeacher(null);
-        form.resetFields();
     };
 
     const columns = [
@@ -100,7 +72,7 @@ function Teachers() {
             render: (_, record) => (
                 <Space align="start" size={14}>
                     <Avatar size={52} style={{ background: "linear-gradient(135deg, #0f58a8 0%, #1d7fe0 100%)" }}>
-                        {record.name
+                        {(record.name || "-")
                             .split(" ")
                             .slice(0, 2)
                             .map((part) => part[0])
@@ -108,24 +80,15 @@ function Teachers() {
                     </Avatar>
                     <div>
                         <div style={{ fontWeight: 700, color: "#102a43" }}>{record.name}</div>
-                        <div style={{ marginTop: 4, color: "#627d98", fontSize: 13 }}>{record.phone}</div>
+                        <div style={{ marginTop: 4, color: "#627d98", fontSize: 13 }}>{record.nim_nls}</div>
                     </div>
                 </Space>
             ),
         },
         {
-            title: "Peran",
+            title: "Role",
             dataIndex: "role",
             render: (value) => <Tag color="blue" style={{ borderRadius: 999, padding: "2px 10px" }}>{value}</Tag>,
-        },
-        {
-            title: "Bidang",
-            dataIndex: "subject",
-        },
-        {
-            title: "Status",
-            dataIndex: "status",
-            render: (value) => <Tag color={statusColors[value]} style={{ borderRadius: 999, padding: "2px 10px" }}>{value}</Tag>,
         },
         {
             title: "Aksi",
@@ -134,21 +97,13 @@ function Teachers() {
                     <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
                         Edit
                     </Button>
-                    <Popconfirm title="Hapus guru ini?" description="Perubahan hanya terjadi di state lokal." onConfirm={() => handleDelete(record.id)} okText="Hapus" cancelText="Batal">
-                        <Button size="small" danger icon={<DeleteOutlined />}>
-                            Hapus
-                        </Button>
-                    </Popconfirm>
                 </Space>
             ),
         },
     ];
 
     return (
-        <AdminLayout
-            title="Manajemen guru"
-            extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>Tambah Guru</Button>}
-        >
+        <AdminLayout title="Manajemen guru & staf" extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>Tambah Guru / Staf</Button>}>
             <div style={{ display: "grid", gap: 20 }}>
                 <Row gutter={[20, 20]}>
                     {summaryCards.map((item) => (
@@ -163,39 +118,23 @@ function Teachers() {
                 </Row>
 
                 <Card bordered={false} style={{ borderRadius: 24, boxShadow: "0 14px 32px rgba(15, 23, 42, 0.06)" }}>
-                    <Table
-                        rowKey="id"
-                        columns={columns}
-                        dataSource={teachers}
-                        pagination={false}
-                        size="middle"
-                    />
+                    <Table rowKey="_id" columns={columns} dataSource={teachers} pagination={false} size="middle" loading={loading} />
                 </Card>
             </div>
 
-            <Modal
-                title={editingTeacher ? "Edit guru" : "Tambah guru"}
-                open={isModalOpen}
-                onCancel={() => setIsModalOpen(false)}
-                onOk={() => form.submit()}
-                okText={editingTeacher ? "Simpan perubahan" : "Simpan guru"}
-                destroyOnClose
-            >
+            <Modal title={editingTeacher ? "Edit Guru / Staf" : "Tambah Guru / Staf"} open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
                     <Form.Item name="name" label="Nama" rules={[{ required: true, message: "Nama guru wajib diisi." }]}>
                         <Input placeholder="Masukkan nama guru" />
                     </Form.Item>
-                    <Form.Item name="role" label="Peran" rules={[{ required: true, message: "Peran wajib dipilih." }]}>
+                    <Form.Item name="nim_nls" label="NIM/NLS" rules={[{ required: true, message: "NIM/NLS wajib diisi." }]}>
+                        <Input placeholder="Masukkan NIM/NLS" />
+                    </Form.Item>
+                    <Form.Item name="role" label="Role" rules={[{ required: true, message: "Role wajib dipilih." }]}>
                         <Select options={roleOptions.map((item) => ({ value: item, label: item }))} />
                     </Form.Item>
-                    <Form.Item name="subject" label="Bidang / Mapel" rules={[{ required: true, message: "Bidang wajib diisi." }]}>
-                        <Input placeholder="Contoh: Matematika" />
-                    </Form.Item>
-                    <Form.Item name="phone" label="Kontak" rules={[{ required: true, message: "Kontak wajib diisi." }]}>
-                        <Input placeholder="Contoh: +62 812 3456 7890" />
-                    </Form.Item>
-                    <Form.Item name="status" label="Status" rules={[{ required: true, message: "Status wajib dipilih." }]}>
-                        <Select options={statusOptions.map((item) => ({ value: item, label: item }))} />
+                    <Form.Item name="password" label="Password" rules={editingTeacher ? [] : [{ required: true, message: "Password wajib diisi." }]}>
+                        <Input.Password placeholder="Masukkan password" />
                     </Form.Item>
                 </Form>
             </Modal>

@@ -1,60 +1,42 @@
-import React, { useMemo, useState } from "react";
-import { Button, Card, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Typography } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Card, Col, Form, Input, Modal, Popconfirm, Row, Space, Table, Tag, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReadOutlined } from "@ant-design/icons";
 import AdminLayout from "../components/AdminLayout.jsx";
-
-const initialNews = [
-    {
-        id: 1,
-        title: "Study Tour ke Bali",
-        category: "Kegiatan",
-        date: "12 Apr 2026",
-        status: "Published",
-        excerpt: "Siswa kelas XI Melakukan Study Tour ke Bali untuk memperluas wawasan budaya dan sejarah Indonesia.",
-    },
-    {
-        id: 2,
-        title: "Upacara Bendera Hari Senin",
-        category: "Kesiswaan",
-        date: "08 Apr 2024",
-        status: "Draft",
-        excerpt: "Agenda rutin untuk membangun kedisiplinan dan rasa tanggung jawab siswa.",
-    },
-    {
-        id: 3,
-        title: "Sekolah Libur 2 Minggu Akibat Covid-19",
-        category: "Pengumuman",
-        date: "05 Apr 2024",
-        status: "Archived",
-        excerpt: "Sekolah akan libur selama 2 minggu akibat pandemi Covid-19.",
-    },
-];
-
-const categoryOptions = ["Kegiatan", "Kesiswaan", "Akademik", "Prestasi", "Pengumuman"];
-const statusOptions = ["Published", "Draft", "Archived"];
-
-const statusColors = {
-    Published: "green",
-    Draft: "gold",
-    Archived: "default",
-};
+import api from "../../api/index.js";
 
 function News() {
-    const [newsItems, setNewsItems] = useState(initialNews);
+    const [newsItems, setNewsItems] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [form] = Form.useForm();
 
     const summaryCards = useMemo(() => ([
-        { label: "Total berita", value: newsItems.length, description: "Data statis yang bisa ditambah atau dihapus" },
-        { label: "Berita terbit", value: newsItems.filter((item) => item.status === "Published").length, description: "Tampil sebagai publikasi aktif" },
-        { label: "Berita draft", value: newsItems.filter((item) => item.status === "Draft").length, description: "Siap diedit sebelum dipublikasikan" },
+        { label: "Total berita", value: newsItems.length, description: "Data yang tersimpan di backend" },
+        { label: "Terbaru", value: newsItems[0] ? 1 : 0, description: "Berita paling atas di daftar" },
+        { label: "Dengan gambar", value: newsItems.filter((item) => item.imageUrl).length, description: "Berita yang punya gambar" },
     ]), [newsItems]);
+
+    // Load news items from backend
+    const loadNews = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get("/berita");
+            setNewsItems(res.data);
+        } catch (err) {
+            console.error("Failed to load news:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadNews();
+    }, []);
 
     const openCreateModal = () => {
         setEditingItem(null);
         form.resetFields();
-        form.setFieldsValue({ status: "Draft", category: categoryOptions[0], date: "10 Apr 2024" });
         setIsModalOpen(true);
     };
 
@@ -64,26 +46,30 @@ function News() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
-        setNewsItems((current) => current.filter((item) => item.id !== id));
+    const handleDelete = async (id) => {
+        try {
+            await api.delete(`/berita/${id}`);
+            await loadNews();
+        } catch (err) {
+            console.error("Failed to delete news:", err);
+        }
     };
 
-    const handleSubmit = (values) => {
-        if (editingItem) {
-            setNewsItems((current) => current.map((item) => (item.id === editingItem.id ? { ...item, ...values } : item)));
-        } else {
-            setNewsItems((current) => [
-                {
-                    id: Date.now(),
-                    ...values,
-                },
-                ...current,
-            ]);
-        }
+    const handleSubmit = async (values) => {
+        try {
+            if (editingItem) {
+                await api.put(`/berita/${editingItem._id}`, values);
+            } else {
+                await api.post("/berita", values);
+            }
 
-        setIsModalOpen(false);
-        setEditingItem(null);
-        form.resetFields();
+            await loadNews();
+            setIsModalOpen(false);
+            setEditingItem(null);
+            form.resetFields();
+        } catch (err) {
+            console.error("Failed to save news:", err);
+        }
     };
 
     const columns = [
@@ -92,29 +78,25 @@ function News() {
             dataIndex: "title",
             render: (_, record) => (
                 <Space align="start" size={14}>
-                    <div style={{ width: 54, height: 54, borderRadius: 18, background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)", display: "grid", placeItems: "center", color: "#0f58a8", flexShrink: 0 }}>
-                        <ReadOutlined />
+                    <div style={{ width: 54, height: 54, borderRadius: 18, background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)", display: "grid", placeItems: "center", color: "#0f58a8", flexShrink: 0, overflow: "hidden" }}>
+                        {record.imageUrl ? <img src={record.imageUrl} alt={record.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ReadOutlined />}
                     </div>
                     <div>
                         <div style={{ fontWeight: 700, color: "#102a43" }}>{record.title}</div>
-                        <div style={{ marginTop: 4, color: "#627d98", fontSize: 13, maxWidth: 420 }}>{record.excerpt}</div>
+                        <div style={{ marginTop: 4, color: "#627d98", fontSize: 13, maxWidth: 420 }}>{record.summary}</div>
                     </div>
                 </Space>
             ),
         },
         {
-            title: "Kategori",
-            dataIndex: "category",
-            render: (value) => <Tag color="blue" style={{ borderRadius: 999, padding: "2px 10px" }}>{value}</Tag>,
-        },
-        {
             title: "Tanggal",
-            dataIndex: "date",
+            dataIndex: "createdAt",
+            render: (value) => new Date(value).toLocaleDateString("id-ID"),
         },
         {
-            title: "Status",
-            dataIndex: "status",
-            render: (value) => <Tag color={statusColors[value]} style={{ borderRadius: 999, padding: "2px 10px" }}>{value}</Tag>,
+            title: "Pembuat",
+            dataIndex: "createdBy",
+            render: (value) => value || "-",
         },
         {
             title: "Aksi",
@@ -123,7 +105,7 @@ function News() {
                     <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
                         Edit
                     </Button>
-                    <Popconfirm title="Hapus berita ini?" description="Tindakan ini hanya menghapus data dari mock-up." onConfirm={() => handleDelete(record.id)} okText="Hapus" cancelText="Batal">
+                    <Popconfirm title="Hapus berita ini?" description="Tindakan ini akan menghapus data dari backend." onConfirm={() => handleDelete(record._id)} okText="Hapus" cancelText="Batal">
                         <Button size="small" danger icon={<DeleteOutlined />}>
                             Hapus
                         </Button>
@@ -153,11 +135,12 @@ function News() {
 
                 <Card bordered={false} style={{ borderRadius: 24, boxShadow: "0 14px 32px rgba(15, 23, 42, 0.06)" }}>
                     <Table
-                        rowKey="id"
+                        rowKey="_id"
                         columns={columns}
                         dataSource={newsItems}
                         pagination={false}
                         size="middle"
+                        loading={loading}
                     />
                 </Card>
             </div>
@@ -174,17 +157,14 @@ function News() {
                     <Form.Item name="title" label="Judul" rules={[{ required: true, message: "Judul berita wajib diisi." }]}>
                         <Input placeholder="Masukkan judul berita" />
                     </Form.Item>
-                    <Form.Item name="category" label="Kategori" rules={[{ required: true, message: "Kategori wajib dipilih." }]}>
-                        <Select options={categoryOptions.map((item) => ({ value: item, label: item }))} />
+                    <Form.Item name="summary" label="Ringkasan" rules={[{ required: true, message: "Ringkasan berita wajib diisi." }]}>
+                        <Input.TextArea rows={3} placeholder="Masukkan ringkasan berita" />
                     </Form.Item>
-                    <Form.Item name="date" label="Tanggal tampil" rules={[{ required: true, message: "Tanggal wajib diisi." }]}>
-                        <Input placeholder="Contoh: 10 Apr 2024" />
+                    <Form.Item name="content" label="Isi berita" rules={[{ required: true, message: "Isi berita wajib diisi." }]}>
+                        <Input.TextArea rows={6} placeholder="Masukkan isi berita" />
                     </Form.Item>
-                    <Form.Item name="status" label="Status" rules={[{ required: true, message: "Status wajib dipilih." }]}>
-                        <Select options={statusOptions.map((item) => ({ value: item, label: item }))} />
-                    </Form.Item>
-                    <Form.Item name="excerpt" label="Ringkasan" rules={[{ required: true, message: "Ringkasan berita wajib diisi." }]}>
-                        <Input.TextArea rows={4} placeholder="Masukkan ringkasan berita" />
+                    <Form.Item name="imageUrl" label="URL gambar">
+                        <Input placeholder="https://..." />
                     </Form.Item>
                 </Form>
             </Modal>

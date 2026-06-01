@@ -1,9 +1,8 @@
-import {
-	HiOutlineChevronRight,
-	HiOutlineMagnifyingGlass,
-	HiOutlineUserGroup,
-} from 'react-icons/hi2'
+import { HiOutlineChevronRight, HiOutlineMagnifyingGlass, HiOutlineUserGroup } from 'react-icons/hi2'
 import { FaBullhorn } from 'react-icons/fa6'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import api from '../../api/index.js'
 import Navbar from '../../components/navbar.jsx'
 
 const teacherItems = [
@@ -20,29 +19,6 @@ const studentItems = [
 	{ name: 'Siswa 3', role: 'Siswa Aktif' },
 	{ name: 'Alumni 1', role: 'Alumni' },
 	{ name: 'Alumni 2', role: 'Alumni' },
-]
-
-const newsItems = [
-	{ title: 'Kunjungan Industri Siswa Kelas XI', date: '09 Apr 2024' },
-	{ title: 'Upacara Bendera Hari Senin', date: '08 Apr 2024' },
-]
-
-const announcements = [
-	{
-		title: 'Libur Hari Raya Idul Fitri',
-		description: 'Libur dimulai tanggal 09 - 08 April 2024.',
-		date: '08 Apr 2024',
-	},
-	{
-		title: 'Pembagian Raport Semester Genap',
-		description: 'Akan dilaksanakan tanggal 09 April 2024.',
-		date: '09 Apr 2024',
-	},
-	{
-		title: 'Kegiatan Class Meeting',
-		description: 'Class Meeting akan dilaksanakan pada tanggal 07 - 09 April 2024.',
-		date: '07 Apr 2024',
-	},
 ]
 
 function SectionHeading({ title, action }) {
@@ -72,6 +48,40 @@ function AvatarCard({ name, role }) {
 }
 
 function Home() {
+	const [newsItems, setNewsItems] = useState([])
+	const [announcements, setAnnouncements] = useState([])
+	const [loading, setLoading] = useState(true)
+	const [fetchedTeachers, setFetchedTeachers] = useState(null)
+	const [fetchedStudents, setFetchedStudents] = useState(null)
+
+	// Fetch news and announcements for the home page
+	useEffect(() => {
+		let mounted = true
+		const load = async () => {
+			try {
+				const [newsRes, announcementRes] = await Promise.all([api.get('/berita'), api.get('/pengumuman')])
+				if (!mounted) return
+				setNewsItems(newsRes.data)
+				setAnnouncements(announcementRes.data)
+
+				// Try to fetch users (requires Admin token). If allowed, derive teachers and students from users
+				try {
+					const usersRes = await api.get('/user')
+					if (!mounted) return
+					const users = usersRes.data
+					setFetchedTeachers(users.filter(u => u.role === 'Guru'))
+					setFetchedStudents(users.filter(u => u.role === 'Murid'))
+				} catch (err) {
+					// ignore - keep mock data
+				}
+			} catch (err) {
+				console.error('Failed to load home data:', err)
+			} finally { if (mounted) setLoading(false) }
+		}
+		load()
+		return () => { mounted = false }
+	}, [])
+
 	return (
 		<main className="min-h-screen bg-slate-100 text-slate-900">
 			<Navbar />
@@ -110,8 +120,8 @@ function Home() {
 				<div className="rounded-3xl bg-white px-5 py-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:px-7">
 					<SectionHeading title="Tenaga Pengajar & Karyawan" action="Lihat Semua Guru & Karyawan" />
 					<div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
-						{teacherItems.map((item) => (
-							<AvatarCard key={item.name} {...item} />
+						{(fetchedTeachers || teacherItems).map((item) => (
+							<AvatarCard key={item.nim_nls || item.name} name={item.name} role={item.role || item.role} />
 						))}
 					</div>
 				</div>
@@ -119,8 +129,8 @@ function Home() {
 				<div className="rounded-3xl bg-white px-5 py-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:px-7">
 					<SectionHeading title="Siswa & Alumni" action="Lihat Semua Siswa & Alumni" />
 					<div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
-						{studentItems.map((item) => (
-							<AvatarCard key={item.name} {...item} />
+						{(fetchedStudents || studentItems).map((item) => (
+							<AvatarCard key={item.nim_nls || item.name} name={item.name} role={item.role || (item.role === undefined ? 'Siswa' : item.role)} />
 						))}
 					</div>
 				</div>
@@ -129,17 +139,21 @@ function Home() {
 					<div>
 						<div className="mb-4 flex items-center justify-between">
 							<h2 className="text-lg font-semibold text-slate-900">Berita Terbaru</h2>
-							<a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+							<Link to="/berita" className="text-sm font-medium text-blue-600 hover:text-blue-700">
 								Lihat Semua
-							</a>
+							</Link>
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">
 							{newsItems.map((item) => (
-								<article key={item.title} className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-									<div className="h-28 bg-slate-300" />
+								<article key={item._id || item.title} className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+									<div className="h-28 bg-slate-300 overflow-hidden">
+										{item.imageUrl ? (
+											<img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+										) : null}
+									</div>
 									<div className="p-4">
 										<h3 className="text-sm font-semibold leading-snug text-slate-900">{item.title}</h3>
-										<p className="mt-4 text-xs text-slate-500">{item.date}</p>
+										<p className="mt-4 text-xs text-slate-500">{item.date || new Date(item.createdAt).toLocaleDateString()}</p>
 									</div>
 								</article>
 							))}
