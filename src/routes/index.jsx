@@ -8,6 +8,7 @@ import Forbidden from "../Public Interface/pages/forbidden.jsx";
 import Dashboard from "../Admin Interface/pages/dashboard.jsx";
 import News from "../Admin Interface/pages/news.jsx";
 import Teachers from "../Admin Interface/pages/teachers.jsx";
+import Announcements from "../Admin Interface/pages/announcements.jsx";
 import { AuthProvider } from "../context/AuthContext.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
@@ -40,6 +41,14 @@ function Index() {
             element={
               <ProtectedRoute allowedRoles={["Admin", "Guru", "Staff"]}>
                 <Teachers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/announcements"
+            element={
+              <ProtectedRoute allowedRoles={["Admin", "Guru", "Staff"]}>
+                <Announcements />
               </ProtectedRoute>
             }
           />

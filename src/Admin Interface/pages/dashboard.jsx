@@ -105,6 +105,11 @@ function Dashboard() {
                                             Buka halaman berita
                                         </Button>
                                     </Link>
+                                    <Link to="/dashboard/announcements">
+                                        <Button block size="large" style={{ borderRadius: 14, height: 48 }} icon={<ArrowRightOutlined />}>
+                                            Buka halaman pengumuman
+                                        </Button>
+                                    </Link>
                                     <Link to="/dashboard/teachers">
                                         <Button block size="large" style={{ borderRadius: 14, height: 48 }} icon={<ArrowRightOutlined />}>
                                             Buka halaman guru

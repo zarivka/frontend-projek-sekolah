@@ -3,6 +3,7 @@ import { Layout, Menu } from "antd";
 import {
     DashboardOutlined,
     ReadOutlined,
+    NotificationOutlined,
     TeamOutlined,
     LogoutOutlined,
 } from '@ant-design/icons';
@@ -18,6 +19,7 @@ const Sidebar = ({ collapsed, onCollapse }) => {
     const selectedKey = useMemo(() => {
         const path = location.pathname;
         if (path.startsWith("/dashboard/news")) return "news";
+        if (path.startsWith("/dashboard/announcements")) return "announcements";
         if (path.startsWith("/dashboard/teachers")) return "teachers";
         if (path.startsWith("/dashboard")) return "dashboard";
         return "dashboard";
@@ -40,8 +42,7 @@ const Sidebar = ({ collapsed, onCollapse }) => {
             <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: 16 }}>
                 <div style={{ borderRadius: 20, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", padding: 16, color: "#fff" }}>
                     <div style={{ fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.72 }}>Admin Interface</div>
-                    <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>Sekolah Pak Sona</div>
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>Mode mock-up statis</div>
+                    <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>SMKN 10 SMG</div>
                 </div>
                 <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} style={{ background: "transparent", borderInlineEnd: 0 }}>
                 <Menu.Item key="dashboard" icon={<DashboardOutlined />}>
@@ -49,6 +50,9 @@ const Sidebar = ({ collapsed, onCollapse }) => {
                 </Menu.Item>
                 <Menu.Item key="news" icon={<ReadOutlined />}>
                     <Link to="/dashboard/news">News</Link>
+                </Menu.Item>
+                <Menu.Item key="announcements" icon={<NotificationOutlined />}>
+                    <Link to="/dashboard/announcements">Announcements</Link>
                 </Menu.Item>
                 <Menu.Item key="teachers" icon={<TeamOutlined />}>
                     <Link to="/dashboard/teachers">Teachers</Link>
