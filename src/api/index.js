@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Import API URL from environment variable (Yen Misal Pengen Mbok Hosting, Bas) or use default
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BaseApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = BaseApiUrl.replace(/\/$/, '');
 
 const api = axios.create({
   baseURL: API_URL,
