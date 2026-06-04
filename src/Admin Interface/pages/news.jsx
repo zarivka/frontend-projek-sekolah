@@ -9,6 +9,9 @@ function News() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
     const [form] = Form.useForm();
 
     const summaryCards = useMemo(() => ([
@@ -37,12 +40,14 @@ function News() {
     const openCreateModal = () => {
         setEditingItem(null);
         form.resetFields();
+        setSelectedFile(null);
         setIsModalOpen(true);
     };
 
     const openEditModal = (item) => {
         setEditingItem(item);
         form.setFieldsValue(item);
+        setSelectedFile(null);
         setIsModalOpen(true);
     };
 
@@ -56,19 +61,44 @@ function News() {
     };
 
     const handleSubmit = async (values) => {
+        if (submitting || uploadingThumbnail) return;
+
         try {
+            setSubmitting(true);
+            let imageUrl = values.imageUrl || editingItem?.imageUrl || "";
+
+            if (selectedFile) {
+                const uploadFormData = new FormData();
+                uploadFormData.append("image", selectedFile);
+
+                setUploadingThumbnail(true);
+                const uploadResponse = await api.post("/image/upload", uploadFormData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                imageUrl = uploadResponse.data?.url || imageUrl;
+            }
+
+            const payload = {
+                ...values,
+                imageUrl,
+            };
+
             if (editingItem) {
-                await api.put(`/berita/${editingItem._id}`, values);
+                await api.put(`/berita/${editingItem._id}`, payload);
             } else {
-                await api.post("/berita", values);
+                await api.post("/berita", payload);
             }
 
             await loadNews();
             setIsModalOpen(false);
             setEditingItem(null);
+            setSelectedFile(null);
             form.resetFields();
         } catch (err) {
             console.error("Failed to save news:", err);
+        } finally {
+            setSubmitting(false);
+            setUploadingThumbnail(false);
         }
     };
 
@@ -151,6 +181,8 @@ function News() {
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
                 okText={editingItem ? "Simpan perubahan" : "Simpan berita"}
+                confirmLoading={submitting || uploadingThumbnail}
+                okButtonProps={{ disabled: submitting || uploadingThumbnail }}
                 destroyOnClose
             >
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -165,6 +197,13 @@ function News() {
                     </Form.Item>
                     <Form.Item name="imageUrl" label="URL gambar">
                         <Input placeholder="https://..." />
+                    </Form.Item>
+                    <Form.Item label="Thumbnail file">
+                        <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                        />
                     </Form.Item>
                 </Form>
             </Modal>

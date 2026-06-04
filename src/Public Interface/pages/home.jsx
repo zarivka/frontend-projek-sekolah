@@ -53,6 +53,8 @@ function Home() {
 	const [loading, setLoading] = useState(true)
 	const [fetchedTeachers, setFetchedTeachers] = useState(null)
 	const [fetchedStudents, setFetchedStudents] = useState(null)
+	const visibleNews = newsItems.slice(0, 4)
+	const remainingNewsCount = Math.max(newsItems.length - visibleNews.length, 0)
 
 	// Fetch news and announcements for the home page
 	useEffect(() => {
@@ -144,7 +146,7 @@ function Home() {
 							</Link>
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">
-							{newsItems.map((item) => (
+							{visibleNews.map((item) => (
 								<article key={item._id || item.title} className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
 									<div className="h-28 bg-slate-300 overflow-hidden">
 										{item.imageUrl ? (
@@ -158,6 +160,12 @@ function Home() {
 								</article>
 							))}
 						</div>
+						{remainingNewsCount > 0 ? (
+							<div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/80 px-4 py-3 text-sm text-blue-700">
+								<span className="font-semibold">...</span>
+								<span className="ml-2">Masih ada {remainingNewsCount} berita lain yang bisa dibaca.</span>
+							</div>
+						) : null}
 					</div>
 
 					<div className="rounded-2xl bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
